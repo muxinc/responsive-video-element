@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>&lt;responsive-video&gt;</title>
+  <meta name="description" content="A responsive video element with rendition switching, lazy loading and autopause.">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      text-align: center;
+      display: grid;
+      min-height: 100vh;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    responsive-video {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+    }
+
+    img {
+      width: 100%;
+      height: auto;
+    }
+
+    nav {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+    }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "custom-media-element": "https://cdn.jsdelivr.net/npm/custom-media-element@1.2/+esm",
+        "media-tracks": "https://cdn.jsdelivr.net/npm/media-tracks@0.3/+esm"
+      }
+    }
+  </script>
+  <script type="module" src="../../responsive-video-element.js"></script>
+</head>
+<body>
+  <h1>
+    <a href="https://github.com/muxinc/responsive-video-element">
+      <code>&lt;responsive-video&gt;</code>
+    </a>
+  </h1>
+
+  <responsive-video
+    id="video"
+    controls
+    muted
+    autopause
+    loading="lazy"
+    srcset="
+      https://stream.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/high.mp4 1920w,
+      https://stream.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/medium.mp4 854w,
+      https://stream.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/low.mp4 480w
+    "
+  >
+    <img
+      slot="poster"
+      loading="lazy"
+      decoding="async"
+      width="1920"
+      height="1080"
+      srcset="
+        https://image.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/thumbnail.jpg?time=5.4&width=1920 1920w,
+        https://image.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/thumbnail.jpg?time=5.4&width=1600 1600w,
+        https://image.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/thumbnail.jpg?time=5.4&width=960 960w,
+        https://image.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/thumbnail.jpg?time=5.4&width=640 640w
+      "
+      sizes="(width < 800px) 100vw, 800px"
+    >
+    <video slot="media"></video>
+  </responsive-video>
+
+  <nav>
+    <select id="qualityselect"></select>
+
+    <p>
+      Quality: <span id="renditionactive">N/A</span>
+    </p>
+  </nav>
+
+  <script type="module">
+    video.addEventListener('emptied', () => {
+      renditionactive.textContent = 'N/A';
+    });
+
+    const renderQualitySelect = () => {
+      qualityselect.textContent = '';
+      for (const rendition of video.videoRenditions) {
+        qualityselect.append(new Option(
+          `${Math.round(Math.min(rendition.width, rendition.height))}p`,
+          rendition.id,
+        ));
+      }
+    };
+
+    video.videoRenditions.addEventListener('addrendition', renderQualitySelect);
+    renderQualitySelect();
+
+    video.addEventListener('resize', () => {
+      renditionactive.textContent = `${Math.min(video.videoWidth, video.videoHeight)}p`;
+    });
+
+    qualityselect.addEventListener('change', () => {
+      video.videoRenditions.selectedIndex = qualityselect.selectedIndex;
+    });
+  </script>
+
+  <br>
+
+</body>
+</html>

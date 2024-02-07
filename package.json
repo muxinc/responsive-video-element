@@ -1,0 +1,44 @@
+{
+  "name": "responsive-video-element",
+  "version": "0.0.0",
+  "description": "A responsive video element with rendition switching, lazy loading and autopause.",
+  "author": "Wesley Luyten <me@wesleyluyten.com> (https://wesleyluyten.com)",
+  "license": "MIT",
+  "homepage": "https://github.com/muxinc/responsive-video-element#readme",
+  "bugs": {
+    "url": "https://github.com/muxinc/responsive-video-element/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/muxinc/responsive-video-element.git"
+  },
+  "type": "module",
+  "main": "responsive-video-element.js",
+  "files": [
+    "responsive-video-element.d.ts",
+    "responsive-video-element.js",
+    "responsive-video-mixin.d.ts",
+    "responsive-video-mixin.js",
+    "utils.js"
+  ],
+  "scripts": {
+    "test": "npm run test:types && wet test --coverage",
+    "test:types": "tsc *.js --noEmit --checkJs --target esnext --moduleResolution nodenext --module nodenext",
+    "dev": "wet serve --redirect :examples/vanilla/ --livereload --cors"
+  },
+  "dependencies": {
+    "custom-media-element": "^1.2.2",
+    "media-tracks": "^0.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "wet-run": "^1.0.3"
+  },
+  "keywords": [
+    "web component",
+    "custom element",
+    "video",
+    "media",
+    "player"
+  ]
+}
