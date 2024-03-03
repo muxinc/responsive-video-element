@@ -3,16 +3,18 @@ import { getScaleFromDimensions, observeIntersection } from './utils.js';
 
 /** @type {import('./responsive-video-mixin.js').ResponsiveVideoMixin} ResponsiveVideoMixin */
 export const ResponsiveVideoMixin = (superclass) => {
-
   const template = globalThis.document?.createElement('template');
 
   if (template) {
-    template.innerHTML = superclass.template.innerHTML + /*html*/`
+    template.innerHTML =
+      superclass.template.innerHTML +
+      /*html*/ `
       <style>
         :host {
           display: grid;
         }
 
+        slot[name=media] > *,
         ::slotted([slot=media]),
         ::slotted([slot=poster]) {
           grid-area: 1 / 1;
@@ -37,45 +39,42 @@ export const ResponsiveVideoMixin = (superclass) => {
     static template = template;
 
     static get observedAttributes() {
-      return [
-        ...super.observedAttributes,
-        'srcset',
-        'sizes',
-        'loading',
-        'autopause',
-        'autoplay',
-      ];
+      return [...super.observedAttributes, 'srcset', 'loading', 'autopause', 'autoplay'];
     }
 
     #optimalRendition;
+    #intersectionEntry;
 
     constructor() {
       super();
 
-      this.addEventListener('playing', this);
-      this.addEventListener('loadstart', this);
       this.videoRenditions.addEventListener('change', this);
 
       observeIntersection(this, this.#handleIntersection);
     }
 
     #handleIntersection = (entry) => {
-      if (entry.isIntersecting) {
-        if (!this.src && this.loading === 'lazy' && this.#optimalRendition) {
-          this.src = this.#optimalRendition.src;
+      this.#intersectionEntry = entry;
+      this.#checkIntersection();
+    };
+
+    #checkIntersection() {
+      if (this.#intersectionEntry?.isIntersecting) {
+        if (!this.nativeEl.src && this.loading === 'lazy' && this.#optimalRendition) {
+          if (this.nativeEl.src !== this.#optimalRendition.src) {
+            this.nativeEl.src = this.#optimalRendition.src;
+          }
         }
 
         if (this.autoplay && this.autopause) {
-
-          if (this.paused && entry.intersectionRatio >= .25) {
+          if (this.paused && this.#intersectionEntry.intersectionRatio >= 0.25) {
             this.play();
-          }
-          else if (!this.paused && entry.intersectionRatio < .25) {
+          } else if (!this.paused && this.#intersectionEntry.intersectionRatio < 0.25) {
             this.pause();
           }
         }
       }
-    };
+    }
 
     handleEvent(event) {
       super.handleEvent?.(event);
@@ -90,31 +89,80 @@ export const ResponsiveVideoMixin = (superclass) => {
           this.#switchRendition();
           break;
         }
+        case 'slotchange':
+          this.#handleSlotChange(event);
+          break;
+        case 'resize':
+          this.#updateRendition();
+          break;
       }
     }
 
     #togglePoster() {
       const hasProgress = this.currentTime > 0 || !this.paused;
 
-      this.shadowRoot?.querySelector('[name=poster]')
-        ?.toggleAttribute('hidden', hasProgress);
+      this.shadowRoot?.querySelector('[name=poster]')?.toggleAttribute('hidden', hasProgress);
+    }
+
+    #handleSlotChange(event) {
+      const { target } = event;
+
+      if (target.localName === 'slot' && !target.name) {
+        this.load();
+      }
+    }
+
+    #findVideoRenditions() {
+      const matchingSource = this.#getMatchingSource();
+      if (matchingSource?.src) {
+        return [{ src: matchingSource.src }];
+      }
+
+      /** @type {string | undefined} */
+      let srcset = matchingSource?.srcset;
+      if (!srcset) return '';
+
+      return getParsedSet(srcset, this.width, this.height);
+    }
+
+    #getMatchingSource() {
+      if (this.src || this.srcset) return this;
+
+      /** @type {HTMLSlotElement | undefined | null} */
+      const defaultSlot = this.shadowRoot?.querySelector('slot:not([name])');
+      const assignedElements = defaultSlot?.assignedElements({ flatten: true });
+
+      const sources = /** @type {HTMLSourceElement[] | undefined} */ (
+        assignedElements?.filter((el) => el.localName === 'source')
+      );
+
+      return sources?.find((el) => globalThis.matchMedia(el.media).matches);
+    }
+
+    #updateRendition() {
+      for (const rendition of this.videoRenditions) {
+        if (this.currentSrc === rendition.src) {
+          rendition.width = this.videoWidth;
+          rendition.height = this.videoHeight;
+        }
+      }
     }
 
     attributeChangedCallback(name, oldValue, newValue) {
       const allowAutoplay = !(this.autoplay && this.autopause);
 
-      if (name !== 'autoplay' || allowAutoplay) {
+      if (name != 'src' && (name !== 'autoplay' || allowAutoplay)) {
         super.attributeChangedCallback(name, oldValue, newValue);
       }
 
-      if (name === 'srcset' && oldValue !== newValue) {
+      if ((name === 'srcset' || name === 'src') && oldValue !== newValue) {
         this.load();
       }
     }
 
     async load() {
-
       let videoTrack = this.videoTracks.getTrackById('main');
+
       if (!videoTrack) {
         videoTrack = this.addVideoTrack('main');
         videoTrack.id = 'main';
@@ -125,23 +173,30 @@ export const ResponsiveVideoMixin = (superclass) => {
         videoTrack.removeRendition(rendition);
       }
 
-      const renditions = getParsedSet(this.srcset, this.width, this.height);
+      const renditions = this.#findVideoRenditions();
 
       for (const [i, rendition] of Object.entries(renditions)) {
-
         const videoRendition = videoTrack.addRendition(
           rendition.src,
           rendition.width,
-          rendition.height,
+          rendition.height
         );
         videoRendition.id = `${i}`;
       }
 
-      this.#optimalRendition = findOptimalRendition(this.videoRenditions, this.clientWidth, this.clientHeight);
+      this.#optimalRendition = findOptimalRendition(
+        this.videoRenditions,
+        this.clientWidth,
+        this.clientHeight
+      );
 
       if (this.loading === 'eager') {
-        this.src = this.#optimalRendition.src;
+        if (this.nativeEl.src !== this.#optimalRendition.src) {
+          this.nativeEl.src = this.#optimalRendition.src;
+        }
       }
+
+      this.#checkIntersection();
     }
 
     #switchRendition() {
@@ -150,10 +205,20 @@ export const ResponsiveVideoMixin = (superclass) => {
 
       if (rendition?.src) {
         const prevCurrentTime = this.currentTime;
-        this.src = rendition.src;
+        const prevPaused = this.paused;
+        this.nativeEl.src = rendition.src;
         this.currentTime = prevCurrentTime;
-        if (!this.paused) this.play();
+        if (!prevPaused) this.play();
       }
+    }
+
+    get src() {
+      return this.getAttribute('src') ?? '';
+    }
+
+    set src(val) {
+      if (this.src == val) return;
+      this.setAttribute('src', `${val}`);
     }
 
     get srcset() {
@@ -186,16 +251,10 @@ export const ResponsiveVideoMixin = (superclass) => {
 };
 
 function findOptimalRendition(videoRenditions, clientWidth, clientHeight) {
-
   const renditionsWithScale = [...videoRenditions]
     .map((rendition) => ({
       ...rendition,
-      scale: getScaleFromDimensions(
-        clientWidth,
-        clientHeight,
-        rendition.width,
-        rendition.height
-      ),
+      scale: getScaleFromDimensions(clientWidth, clientHeight, rendition.width, rendition.height),
     }))
     // Sort by scale ascending.
     .sort((a, b) => a.scale - b.scale);
@@ -208,8 +267,7 @@ function findOptimalRendition(videoRenditions, clientWidth, clientHeight) {
   // If using pixel density descriptors.
   if (!rendition) {
     const devicePixelRatio = globalThis.devicePixelRatio ?? 1;
-    rendition = renditionsWithScale
-      .find(({ pixelRatio }) => pixelRatio >= devicePixelRatio);
+    rendition = renditionsWithScale.find(({ pixelRatio }) => pixelRatio >= devicePixelRatio);
   }
 
   // Fallback to the highest rendition available.

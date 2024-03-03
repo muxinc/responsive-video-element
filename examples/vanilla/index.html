@@ -8,13 +8,13 @@
     body {
       font-family: system-ui, sans-serif;
       text-align: center;
-      display: grid;
-      min-height: 100vh;
+      display: block;
       max-width: 800px;
       margin: 0 auto;
     }
 
     responsive-video {
+      max-width: 100%;
       width: 100%;
       aspect-ratio: 16 / 9;
     }
@@ -40,7 +40,7 @@
       }
     }
   </script>
-  <script type="module" src="../../responsive-video-element.js"></script>
+  <script type="module" src="../../src/responsive-video-element.js"></script>
 </head>
 <body>
   <h1>
@@ -55,27 +55,49 @@
     muted
     autopause
     loading="lazy"
-    srcset="
-      https://stream.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/high.mp4 1920w,
-      https://stream.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/medium.mp4 854w,
-      https://stream.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/low.mp4 480w
-    "
   >
-    <img
-      slot="poster"
-      loading="lazy"
-      decoding="async"
-      width="1920"
-      height="1080"
+    <picture slot="poster">
+      <source
+        media="(orientation: portrait)"
+        width="1080"
+        height="1920"
+        srcset="
+          https://image.mux.com/1EFcsL5JET00t00mBv01t00xt00T4QeNQtsXx2cKY6DLd7RM/thumbnail.webp?time=5.4&width=1600 1600w,
+          https://image.mux.com/1EFcsL5JET00t00mBv01t00xt00T4QeNQtsXx2cKY6DLd7RM/thumbnail.webp?time=5.4&width=960 960w,
+          https://image.mux.com/1EFcsL5JET00t00mBv01t00xt00T4QeNQtsXx2cKY6DLd7RM/thumbnail.webp?time=5.4&width=640 640w
+        "
+        sizes="(width < 800px) 100vw, 800px"
+      >
+      <img
+        loading="lazy"
+        decoding="async"
+        width="1920"
+        height="1080"
+        srcset="
+          https://image.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/thumbnail.webp?time=5.4&width=1600 1600w,
+          https://image.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/thumbnail.webp?time=5.4&width=960 960w,
+          https://image.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/thumbnail.webp?time=5.4&width=640 640w
+        "
+        sizes="(width < 800px) 100vw, 800px"
+      >
+    </picture>
+    <source
+      media="(orientation: portrait)"
       srcset="
-        https://image.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/thumbnail.jpg?time=5.4&width=1920 1920w,
-        https://image.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/thumbnail.jpg?time=5.4&width=1600 1600w,
-        https://image.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/thumbnail.jpg?time=5.4&width=960 960w,
-        https://image.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/thumbnail.jpg?time=5.4&width=640 640w
+        https://stream.mux.com/1EFcsL5JET00t00mBv01t00xt00T4QeNQtsXx2cKY6DLd7RM/high.mp4 1920w,
+        https://stream.mux.com/1EFcsL5JET00t00mBv01t00xt00T4QeNQtsXx2cKY6DLd7RM/medium.mp4 854w,
+        https://stream.mux.com/1EFcsL5JET00t00mBv01t00xt00T4QeNQtsXx2cKY6DLd7RM/low.mp4 480w
       "
-      sizes="(width < 800px) 100vw, 800px"
+      type="video/mp4"
     >
-    <video slot="media"></video>
+    <source
+      srcset="
+        https://stream.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/high.mp4 1920w,
+        https://stream.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/medium.mp4 854w,
+        https://stream.mux.com/maVbJv2GSYNRgS02kPXOOGdJMWGU1mkA019ZUjYE7VU7k/low.mp4 480w
+      "
+      type="video/mp4"
+    >
   </responsive-video>
 
   <nav>
@@ -93,10 +115,13 @@
 
     const renderQualitySelect = () => {
       qualityselect.textContent = '';
+
       for (const rendition of video.videoRenditions) {
         qualityselect.append(new Option(
           `${Math.round(Math.min(rendition.width, rendition.height))}p`,
           rendition.id,
+          rendition.selected,
+          rendition.selected,
         ));
       }
     };
@@ -106,6 +131,7 @@
 
     video.addEventListener('resize', () => {
       renditionactive.textContent = `${Math.min(video.videoWidth, video.videoHeight)}p`;
+      queueMicrotask(renderQualitySelect);
     });
 
     qualityselect.addEventListener('change', () => {
