@@ -19,9 +19,9 @@
     "dist"
   ],
   "scripts": {
-    "lint": "npx eslint *.js -c ./node_modules/wet-run/.eslintrc.json",
+    "lint": "npx eslint src/*.js -c ./node_modules/wet-run/.eslintrc.json",
     "test": "npm run test:types && wet test --coverage",
-    "test:types": "tsc *.js --noEmit --checkJs --target esnext --moduleResolution nodenext --module nodenext",
+    "test:types": "tsc src/*.js --noEmit --checkJs --target esnext --moduleResolution nodenext --module nodenext",
     "dev": "npm run serve & npm run build:esm -- --watch=forever & npm run build:iife -- --watch=forever",
     "serve": "wet serve --redirect :examples/vanilla/ --livereload --cors",
     "build": "npm run build:esm && npm run build:iife && cp src/*.d.ts dist",

@@ -1,8 +1,8 @@
 // @ts-check
 import { test } from 'zora';
 import { CustomVideoElement } from 'custom-media-element';
-import { ResponsiveVideoMixin } from '../responsive-video-mixin.js';
-import { ResponsiveVideoElement } from '../responsive-video-element.js';
+import { ResponsiveVideoMixin } from '../src/responsive-video-mixin.js';
+import { ResponsiveVideoElement } from '../src/responsive-video-element.js';
 
 function isGetter(obj, prop) {
   return !!Object.getOwnPropertyDescriptor(obj, prop)['get'];
